@@ -17,10 +17,10 @@ __Automation__
 
 Include the script in your cron file (`crontab -e`):
 
-Run script once each day at 5:30am:  
+Run script once each day at 5:30am:
 `30 5 * * * /path/to/noipupdater.sh`
 
-Run the script every fifteen minutes:  
+Run the script every fifteen minutes:
 `*/15 * * * * /path/to/noipupdater.sh`
 
 Note: If the cron job doesn't execute correctly, try these suggestions:
@@ -31,3 +31,9 @@ Note: If the cron job doesn't execute correctly, try these suggestions:
 Forked from the [Simple Bash No-IP Updater by AntonioCS](https://github.com/AntonioCS/no-ip.com-bash-updater)
 
 2013 © Matt Mower
+
+My goals with this fork is to be able to use this script on my Android tablet
+with just little extra additionals:
+    - Busybox from Stericson
+    - curl from http://curl.haxx.se/download.html (Linux - Android)
+Maybe other improvements.
