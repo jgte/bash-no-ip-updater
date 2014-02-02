@@ -31,8 +31,8 @@ if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
    exit 1
 fi
 
-USERNAME=$(echo -ne $USERNAME | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g')
-PASSWORD=$(echo -ne $PASSWORD | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g')
+USERNAME=$(echo -ne $USERNAME | od -An -t x1 | sed 's/[[:space:]]//g' | sed 's/\(..\)/%\1/g')
+PASSWORD=$(echo -ne $PASSWORD | od -An -t x1 | sed 's/[[:space:]]//g' | tr -d '\n' | sed 's/\(..\)/%\1/g')
 
 if ! [[ "$FORCEUPDATEFREQ" =~ ^[0-9]+$ ]] ; then
    echo "FORCEUPDATEFREQ has not been set correctly in the config file"
