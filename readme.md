@@ -36,4 +36,5 @@ My goals with this fork is to be able to use this script on my Android tablet
 with just little extra additionals:
     - Busybox from Stericson
     - curl from http://curl.haxx.se/download.html (Linux - Android)
+    - bash from http://pub.mzet.net/bash
 Maybe other improvements.

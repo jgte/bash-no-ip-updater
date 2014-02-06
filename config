@@ -31,4 +31,3 @@ LOGDIR="$HOME/logs"
 # Enter the value in seconds: 864000 = 10days
 # Setting this value to 0 will disable this feature.
 FORCEUPDATEFREQ="864000"
-
