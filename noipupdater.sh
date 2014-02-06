@@ -50,7 +50,8 @@ fi
 LOGFILE=${LOGDIR%/}/noip.log
 IPFILE=${LOGDIR%/}/last_ip
 if [ ! -e $LOGFILE ] || [ ! -e $IPFILE ]; then
-    touch $LOGFILE $IPFILE
+    touch $LOGFILE
+    touch $IPFILE
     if [ $? -ne 0 ]; then
         echo "Log files could not be created. Is the log directory writable?"
         exit 1
