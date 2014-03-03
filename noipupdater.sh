@@ -82,19 +82,30 @@ function valid_ip() {
     return $stat
 }
 
+# Check which if the OS in this machine is of a certain type
+function machine_is
+{
+  OS=`uname -v`
+  [[ ! "${OS//$1/}" == "$OS" ]] && return 0 || return 1
+}
+
 # Program
+
+# Select brew coreutils unix g-prefixed programs in Darwin
+machine_is Darwin && DATE=gdate || DATE=date
+machine_is Darwin && TAC=gtac   || DATE=tac
 
 # Check log for last successful ip change to No-IP and set FUPD flag if an
 # update is necessary.  (Note: 'nochg' return code is not enough for No-IP to be
 # satisfied; must be 'good' return code)
 FUPD=false
-NOW=$(date '+%s')
+NOW=$($DATE '+%s')
 if [ $FORCEUPDATEFREQ -eq 0 ]; then
     FUPD=false
-elif [ -e $LOGFILE ] && tac $LOGFILE | grep -q -m1 '(good)'; then
-    GOODLINE=$(tac $LOGFILE | grep -m1 '(good)')
+elif [ -e $LOGFILE ] && $TAC $LOGFILE | grep -q -m1 '(good)'; then
+    GOODLINE=$($TAC $LOGFILE | grep -m1 '(good)')
     LASTGC=$([[ $GOODLINE =~ \[(.*?)\] ]] && echo "${BASH_REMATCH[1]}")
-    LASTCONTACT=$(date -d "$LASTGC" '+%s')
+    LASTCONTACT=$($DATE -d "$LASTGC" '+%s')
     if [ `expr $NOW - $LASTCONTACT` -gt $FORCEUPDATEFREQ ]; then
         FUPD=true
     fi
@@ -122,7 +133,7 @@ while ! valid_ip $NEWIP; do
             let COUNTER++
             ;;
         *)
-            LOGLINE="[$(date +'%Y-%m-%d %H:%M:%S')] Could not find current IP"
+            LOGLINE="[$($DATE +'%Y-%m-%d %H:%M:%S')] Could not find current IP"
             echo $LOGLINE >> $LOGFILE
             exit 1
             ;;
@@ -139,7 +150,7 @@ else
     RESULT="nochglocal"
 fi
 
-LOGDATE="[$(date +'%Y-%m-%d %H:%M:%S')]"
+LOGDATE="[$($DATE +'%Y-%m-%d %H:%M:%S')]"
 SRESULT=$(echo $RESULT | awk '{ print $1 }')
 case $SRESULT in
     "good")
