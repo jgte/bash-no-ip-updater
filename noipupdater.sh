@@ -14,6 +14,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Functions
+
+# IP Validator
+# http://www.linuxjournal.com/content/validating-ip-address-bash-script
+function valid_ip() {
+    local  ip=$1
+    local  stat=1
+
+    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        OIFS=$IFS
+        IFS='.'
+        ip=($ip)
+        IFS=$OIFS
+        [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 \
+            && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+        stat=$?
+    fi
+    return $stat
+}
+
+# Check which if the OS in this machine is of a certain type
+function machine_is
+{
+  OS=`uname -v`
+  [[ ! "${OS//$1/}" == "$OS" ]] && return 0 || return 1
+}
+
 # Defines
 
 USERAGENT="Bash No-IP Updater/0.7 mowerm@gmail.com"
@@ -31,8 +58,13 @@ if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
    exit 1
 fi
 
-USERNAME=$(echo -ne $USERNAME | od -An -t x1 | sed 's/[[:space:]]//g' | sed 's/\(..\)/%\1/g')
-PASSWORD=$(echo -ne $PASSWORD | od -An -t x1 | sed 's/[[:space:]]//g' | tr -d '\n' | sed 's/\(..\)/%\1/g')
+machine_is Darwin && {
+   USERNAME=$(echo -ne $USERNAME | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g')
+   PASSWORD=$(echo -ne $PASSWORD | xxd -plain | tr -d '\n' | sed 's/\(..\)/%\1/g')
+} || {
+   USERNAME=$(echo -ne $USERNAME | od -An -t x1 | sed 's/[[:space:]]//g' | sed 's/\(..\)/%\1/g')
+   PASSWORD=$(echo -ne $PASSWORD | od -An -t x1 | sed 's/[[:space:]]//g' | tr -d '\n' | sed 's/\(..\)/%\1/g')
+}
 
 if ! [[ "$FORCEUPDATEFREQ" =~ ^[0-9]+$ ]] ; then
    echo "FORCEUPDATEFREQ has not been set correctly in the config file"
@@ -61,33 +93,6 @@ elif [ ! -w $LOGFILE ] || [ ! -w $IPFILE ]; then
     exit 1
 fi
 STOREDIP=$(cat $IPFILE)
-
-# Functions
-
-# IP Validator
-# http://www.linuxjournal.com/content/validating-ip-address-bash-script
-function valid_ip() {
-    local  ip=$1
-    local  stat=1
-
-    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
-        OIFS=$IFS
-        IFS='.'
-        ip=($ip)
-        IFS=$OIFS
-        [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 \
-            && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
-        stat=$?
-    fi
-    return $stat
-}
-
-# Check which if the OS in this machine is of a certain type
-function machine_is
-{
-  OS=`uname -v`
-  [[ ! "${OS//$1/}" == "$OS" ]] && return 0 || return 1
-}
 
 # Program
 
@@ -181,7 +186,7 @@ case $SRESULT in
         LOGLINE="$LOGDATE (911) A fatal error on our side such as a database outage. Retry the update in no sooner than 30 minutes."
         ;;
     *)
-        LOGLINE="$LOGDATE (error) Could not understand the response from No-IP. The DNS update server may be down."
+        LOGLINE="$LOGDATE (error) Could not understand the response from No-IP ($RESULT). The DNS update server may be down."
         ;;
 esac
 
