@@ -41,10 +41,12 @@ function machine_is
   [[ ! "${OS//$1/}" == "$OS" ]] && return 0 || return 1
 }
 
+DIRNOW=$( cd "$( dirname "$0" )" && pwd )
+
 # Defines
 
 USERAGENT="Bash No-IP Updater/0.7 mowerm@gmail.com"
-CONFIGFILE="$( cd "$( dirname "$0" )" && pwd )/config"
+CONFIGFILE="$DIRNOW/config"
 
 if [ -e $CONFIGFILE ]; then
     source $CONFIGFILE
@@ -71,16 +73,16 @@ if ! [[ "$FORCEUPDATEFREQ" =~ ^[0-9]+$ ]] ; then
    exit 1
 fi
 
-if [ ! -d $LOGDIR ]; then
-    mkdir -p $LOGDIR
+if [ ! -d "$LOGDIR" ]; then
+    mkdir -p "$LOGDIR"
     if [ $? -ne 0 ]; then
         echo "Log directory could not be created or accessed."
         exit 1
     fi
 fi
 
-LOGFILE=${LOGDIR%/}/noip.log
-IPFILE=${LOGDIR%/}/last_ip
+LOGFILE="${LOGDIR%/}/noip.log"
+IPFILE="${LOGDIR%/}/last_ip"
 if [ ! -e $LOGFILE ] || [ ! -e $IPFILE ]; then
     touch $LOGFILE
     touch $IPFILE
