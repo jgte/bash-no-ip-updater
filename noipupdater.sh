@@ -195,5 +195,10 @@ esac
 echo $NEWIP > $IPFILE
 echo $LOGLINE >> $LOGFILE
 
+machine_is Darwin && [[ "${@/-crontab/}" == "$@" ]] && {
+  echo "Hit Ctr-C to stop monitoring the DNS update (current IP is $NEWIP)"
+  dns-sd -q $HOST
+}
+
 exit 0
 
