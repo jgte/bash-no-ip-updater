@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -u
 
 # Copyright (C) 2013 Matt Mower
 #
@@ -99,8 +99,19 @@ STOREDIP=$(cat $IPFILE)
 # Program
 
 # Select brew coreutils unix g-prefixed programs in Darwin
-machine_is Darwin && DATE=gdate || DATE=date
-machine_is Darwin && TAC=gtac   || DATE=tac
+if [ $(machine_is Darwin) ]
+then
+  DATE=gdate
+else
+  DATE=date
+fi
+
+if [ $(machine_is Darwin) ]
+then
+  TAC=gtac
+else
+  TAC=tac
+fi
 
 # Check log for last successful ip change to No-IP and set FUPD flag if an
 # update is necessary.  (Note: 'nochg' return code is not enough for No-IP to be
@@ -121,6 +132,7 @@ else
 fi
 
 COUNTER=1
+NEWIP=0
 while ! valid_ip $NEWIP; do
     case $COUNTER in
         1)
