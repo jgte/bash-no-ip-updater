@@ -51,7 +51,19 @@ DIRNOW=$( cd "$( dirname "$0" )" && pwd )
 # Defines
 
 USERAGENT="Bash No-IP Updater/0.7 mowerm@gmail.com"
-CONFIGFILE="$DIRNOW/config"
+
+if [ $# -eq 0 ]
+then
+    CONFIGFILE="$DIRNOW/config"
+else
+    CONFIGFILE="$1"
+fi
+
+[[ ! "${@/-debug/}" == "$@" ]] && {
+    echo DIRNOW=$DIRNOW
+    echo USERAGENT=$USERAGENT
+    echo CONFIGFILE=$CONFIGFILE
+}
 
 if [ -e $CONFIGFILE ]; then
     source $CONFIGFILE
@@ -59,6 +71,11 @@ else
     echo "Config file not found."
     exit 1
 fi
+
+[[ ! "${@/-debug/}" == "$@" ]] && {
+    echo USERNAME=$USERNAME
+    echo PASSWORD=$PASSWORD
+}
 
 if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
    echo "USERNAME or PASSWORD has not been set in the config file."
@@ -71,6 +88,15 @@ machine_is Darwin && {
 } || {
    USERNAME=$(echo -ne $USERNAME | od -An -t x1 | sed 's/[[:space:]]//g' | sed 's/\(..\)/%\1/g')
    PASSWORD=$(echo -ne $PASSWORD | od -An -t x1 | sed 's/[[:space:]]//g' | tr -d '\n' | sed 's/\(..\)/%\1/g')
+}
+
+#use encoded username/passwords if they are set
+[ -z ${USERNAME+x} ] || USERNAME=$USERNAME_ENC
+[ -z ${PASSWORD+x} ] || PASSWORD=$PASSWORD_ENC
+
+[[ ! "${@/-debug/}" == "$@" ]] && {
+    echo USERNAME=$USERNAME
+    echo PASSWORD=$PASSWORD
 }
 
 if ! [[ "$FORCEUPDATEFREQ" =~ ^[0-9]+$ ]] ; then
@@ -118,11 +144,21 @@ else
   TAC=tac
 fi
 
+[[ ! "${@/-debug/}" == "$@" ]] && {
+    echo DATE=$DATE
+    echo TAC=$TAC
+}
+
+
 # Check log for last successful ip change to No-IP and set FUPD flag if an
 # update is necessary.  (Note: 'nochg' return code is not enough for No-IP to be
 # satisfied; must be 'good' return code)
 FUPD=false
 NOW=$($DATE '+%s')
+[[ ! "${@/-debug/}" == "$@" ]] && {
+    echo NOW=$NOW
+    echo FUPD=$FUPD
+}
 if [ $FORCEUPDATEFREQ -eq 0 ]; then
     FUPD=false
 elif [ -e $LOGFILE ] && $TAC $LOGFILE | grep -q -m1 '(good)'; then
@@ -132,9 +168,17 @@ elif [ -e $LOGFILE ] && $TAC $LOGFILE | grep -q -m1 '(good)'; then
     if [ `expr $NOW - $LASTCONTACT` -gt $FORCEUPDATEFREQ ]; then
         FUPD=true
     fi
+    [[ ! "${@/-debug/}" == "$@" ]] && {
+        echo FUPD=$FUPD
+        echo GOODLINE=$GOODLINE
+        echo LASTGC=$LASTGC
+        echo LASTCONTACT=$LASTCONTACT
+    }
 else
     FUPD=true
 fi
+[[ ! "${@/-debug/}" == "$@" ]] && echo FUPD=$FUPD
+
 
 COUNTER=1
 NEWIP=0
@@ -158,12 +202,18 @@ while ! valid_ip $NEWIP; do
             ;;
         *)
             LOGLINE="[$($DATE +'%Y-%m-%d %H:%M:%S')] Could not find current IP"
+            [[ ! "${@/-debug/}" == "$@" ]] && echo LOGLINE=$LOGLINE
             echo $LOGLINE >> $LOGFILE
             exit 1
             ;;
     esac
+    [[ ! "${@/-debug/}" == "$@" ]] && {
+        echo COUNTER=$COUNTER
+        echo NEWIP=$NEWIP
+    }
 done
 
+[[ ! "${@/-debug/}" == "$@" ]] && echo CURL_COM: curl -s -k --user-agent "$USERAGENT" "https://$USERNAME:$PASSWORD@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=$NEWIP"
 if [ $FUPD == true ]; then
     curl -s -k --user-agent "$USERAGENT" "https://$USERNAME:$PASSWORD@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=127.0.0.1" &> /dev/null
     sleep 5
@@ -174,8 +224,12 @@ else
     RESULT="nochglocal"
 fi
 
+[[ ! "${@/-debug/}" == "$@" ]] && echo RESULT=$RESULT
+
 LOGDATE="[$($DATE +'%Y-%m-%d %H:%M:%S')]"
+[[ ! "${@/-debug/}" == "$@" ]] && echo LOGDATE=$LOGDATE
 SRESULT=$(echo $RESULT | awk '{ print $1 }')
+[[ ! "${@/-debug/}" == "$@" ]] && echo SRESULT=$SRESULT
 case $SRESULT in
     "good")
         LOGLINE="$LOGDATE (good) DNS hostname(s) successfully updated to $NEWIP."
@@ -208,6 +262,9 @@ case $SRESULT in
         LOGLINE="$LOGDATE (error) Could not understand the response from No-IP ($RESULT). The DNS update server may be down."
         ;;
 esac
+
+[[ ! "${@/-debug/}" == "$@" ]] && echo LOGLINE=$LOGLINE
+
 
 echo $NEWIP > $IPFILE
 echo $LOGLINE >> $LOGFILE
