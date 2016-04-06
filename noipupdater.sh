@@ -46,20 +46,42 @@ function machine_is
   [[ ! "${OS//$1/}" == "$OS" ]] && return 0 || return 1
 }
 
-DIRNOW=$( cd "$( dirname "$0" )" && pwd )
+DIRNOW="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Defines
 
 USERAGENT="Bash No-IP Updater/0.7 mowerm@gmail.com"
 
-if [ $# -eq 0 ]
-then
-    CONFIGFILE="$DIRNOW/config"
-else
-    CONFIGFILE="$1"
-fi
+#Defaults
 
-[[ ! "${@/-debug/}" == "$@" ]] && {
+DEBUG=false
+CONFIGFILE="$DIRNOW/config"
+CRONTAB=false
+
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+    -d|-debug|--debug)
+        DEBUG=true
+    ;;
+    -c|-config|-config)
+        shift
+        CONFIGFILE="$1"
+    ;;
+    -c=*|-config=*|--config=*)
+        CONFIGFILE="${1#*=}"
+    ;;
+    -crontab|--crontab)
+        CRONTAB=true
+    ;;
+    *)
+        echo "WARNING: ignored input argument '$1'"
+    ;;
+    esac
+    shift
+done
+
+$DEBUG && {
     echo DIRNOW=$DIRNOW
     echo USERAGENT=$USERAGENT
     echo CONFIGFILE=$CONFIGFILE
@@ -68,17 +90,17 @@ fi
 if [ -e $CONFIGFILE ]; then
     source $CONFIGFILE
 else
-    echo "Config file not found."
+    echo "ERROR: Config file not found: $CONFIGFILE"
     exit 1
 fi
 
-[[ ! "${@/-debug/}" == "$@" ]] && {
+$DEBUG && {
     echo USERNAME=$USERNAME
     echo PASSWORD=$PASSWORD
 }
 
 if [ -z "$USERNAME" ] || [ -z "$PASSWORD" ]; then
-   echo "USERNAME or PASSWORD has not been set in the config file."
+   echo "ERROR: USERNAME or PASSWORD has not been set in the config file."
    exit 1
 fi
 
@@ -91,23 +113,23 @@ machine_is Darwin && {
 }
 
 #use encoded username/passwords if they are set
-[ -z ${USERNAME+x} ] || USERNAME=$USERNAME_ENC
-[ -z ${PASSWORD+x} ] || PASSWORD=$PASSWORD_ENC
+[ -z ${USERNAME+x} ] && USERNAME=$USERNAME_ENC
+[ -z ${PASSWORD+x} ] && PASSWORD=$PASSWORD_ENC
 
-[[ ! "${@/-debug/}" == "$@" ]] && {
+$DEBUG && {
     echo USERNAME=$USERNAME
     echo PASSWORD=$PASSWORD
 }
 
 if ! [[ "$FORCEUPDATEFREQ" =~ ^[0-9]+$ ]] ; then
-   echo "FORCEUPDATEFREQ has not been set correctly in the config file"
+   echo "ERROR: FORCEUPDATEFREQ has not been set correctly in the config file"
    exit 1
 fi
 
 if [ ! -d "$LOGDIR" ]; then
     mkdir -p "$LOGDIR"
     if [ $? -ne 0 ]; then
-        echo "Log directory could not be created or accessed."
+        echo "ERROR: Log directory could not be created or accessed."
         exit 1
     fi
 fi
@@ -118,11 +140,11 @@ if [ ! -e $LOGFILE ] || [ ! -e $IPFILE ]; then
     touch $LOGFILE
     touch $IPFILE
     if [ $? -ne 0 ]; then
-        echo "Log files could not be created. Is the log directory writable?"
+        echo "ERROR: Log files could not be created. Is the log directory writable?"
         exit 1
     fi
 elif [ ! -w $LOGFILE ] || [ ! -w $IPFILE ]; then
-    echo "Log files not writable."
+    echo "ERROR: Log files not writable."
     exit 1
 fi
 STOREDIP=$(cat $IPFILE)
@@ -144,7 +166,7 @@ else
   TAC=tac
 fi
 
-[[ ! "${@/-debug/}" == "$@" ]] && {
+$DEBUG && {
     echo DATE=$DATE
     echo TAC=$TAC
 }
@@ -155,7 +177,7 @@ fi
 # satisfied; must be 'good' return code)
 FUPD=false
 NOW=$($DATE '+%s')
-[[ ! "${@/-debug/}" == "$@" ]] && {
+$DEBUG && {
     echo NOW=$NOW
     echo FUPD=$FUPD
 }
@@ -168,7 +190,7 @@ elif [ -e $LOGFILE ] && $TAC $LOGFILE | grep -q -m1 '(good)'; then
     if [ `expr $NOW - $LASTCONTACT` -gt $FORCEUPDATEFREQ ]; then
         FUPD=true
     fi
-    [[ ! "${@/-debug/}" == "$@" ]] && {
+    $DEBUG && {
         echo FUPD=$FUPD
         echo GOODLINE=$GOODLINE
         echo LASTGC=$LASTGC
@@ -177,7 +199,7 @@ elif [ -e $LOGFILE ] && $TAC $LOGFILE | grep -q -m1 '(good)'; then
 else
     FUPD=true
 fi
-[[ ! "${@/-debug/}" == "$@" ]] && echo FUPD=$FUPD
+$DEBUG && echo FUPD=$FUPD
 
 
 COUNTER=1
@@ -202,18 +224,18 @@ while ! valid_ip $NEWIP; do
             ;;
         *)
             LOGLINE="[$($DATE +'%Y-%m-%d %H:%M:%S')] Could not find current IP"
-            [[ ! "${@/-debug/}" == "$@" ]] && echo LOGLINE=$LOGLINE
+            $DEBUG && echo LOGLINE=$LOGLINE
             echo $LOGLINE >> $LOGFILE
             exit 1
             ;;
     esac
-    [[ ! "${@/-debug/}" == "$@" ]] && {
+    $DEBUG && {
         echo COUNTER=$COUNTER
         echo NEWIP=$NEWIP
     }
 done
 
-[[ ! "${@/-debug/}" == "$@" ]] && echo CURL_COM: curl -s -k --user-agent "$USERAGENT" "https://$USERNAME:$PASSWORD@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=$NEWIP"
+$DEBUG && echo CURL_COM: curl -s -k --user-agent "$USERAGENT" "https://$USERNAME:$PASSWORD@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=$NEWIP"
 if [ $FUPD == true ]; then
     curl -s -k --user-agent "$USERAGENT" "https://$USERNAME:$PASSWORD@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=127.0.0.1" &> /dev/null
     sleep 5
@@ -224,12 +246,12 @@ else
     RESULT="nochglocal"
 fi
 
-[[ ! "${@/-debug/}" == "$@" ]] && echo RESULT=$RESULT
+$DEBUG && echo RESULT=$RESULT
 
 LOGDATE="[$($DATE +'%Y-%m-%d %H:%M:%S')]"
-[[ ! "${@/-debug/}" == "$@" ]] && echo LOGDATE=$LOGDATE
+$DEBUG && echo LOGDATE=$LOGDATE
 SRESULT=$(echo $RESULT | awk '{ print $1 }')
-[[ ! "${@/-debug/}" == "$@" ]] && echo SRESULT=$SRESULT
+$DEBUG && echo SRESULT=$SRESULT
 case $SRESULT in
     "good")
         LOGLINE="$LOGDATE (good) DNS hostname(s) successfully updated to $NEWIP."
@@ -263,13 +285,13 @@ case $SRESULT in
         ;;
 esac
 
-[[ ! "${@/-debug/}" == "$@" ]] && echo LOGLINE=$LOGLINE
+$DEBUG && echo LOGLINE=$LOGLINE
 
 
 echo $NEWIP > $IPFILE
 echo $LOGLINE >> $LOGFILE
 
-machine_is Darwin && [[ "${@/-crontab/}" == "$@" ]] && {
+machine_is Darwin && ! $CRONTAB && {
   echo "Hit Ctr-C to stop monitoring the DNS update (current IP is $NEWIP)"
   dns-sd -q $HOST
 }
